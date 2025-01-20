@@ -31,6 +31,10 @@ export const routes: Routes = [
     loadComponent: () => import('./components/signals-vs-rxjs.component').then(m => m.SignalsVsRxJSComponent)
   },
   { 
+    path: 'signals-animated',
+    loadComponent: () => import('./components/signals-animated.component').then(m => m.SignalsAnimatedComponent)
+  },
+  { 
     path: 'code-examples',
     loadComponent: () => import('./components/code-examples.component').then(m => m.CodeExamplesComponent)
   },

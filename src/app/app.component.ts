@@ -56,6 +56,12 @@ import { animate, style, transition, trigger } from '@angular/animations';
               </a>
             </li>
             <li>
+              <a routerLink="/signals-animated" routerLinkActive="active">
+                <span class="icon">✨</span>
+                Animated Signals
+              </a>
+            </li>
+            <li>
               <a routerLink="/code-examples" routerLinkActive="active">
                 <span class="icon">💻</span>
                 Code Examples

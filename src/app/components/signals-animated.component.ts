@@ -1,4 +1,4 @@
-import { Component, signal, computed, effect, Signal, OnInit } from '@angular/core';
+import { Component, signal, computed, effect, Signal, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { animate, style, transition, trigger, state, keyframes } from '@angular/animations';
@@ -8,6 +8,15 @@ interface SignalNode {
   value: number;
   type: 'signal' | 'computed' | 'effect';
   position: { x: number; y: number };
+  description?: string;
+  dependencies?: number[];
+}
+
+interface SignalMetrics {
+  updateCount: number;
+  lastUpdateTime: number;
+  averageUpdateTime: number;
+  peakValue: number;
 }
 
 interface LogEntry {
@@ -20,6 +29,8 @@ interface EffectUpdate {
   id: number;
   message: string;
   timestamp: number;
+  triggerValue: number;
+  computedValue: number;
 }
 
 const STORAGE_KEY = 'signalDemo';
@@ -34,397 +45,8 @@ interface StorageData {
   selector: 'app-signals-animated',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="container">
-      <h2>Understanding Signals with Animations</h2>
-      
-      <div class="visualization-container">
-        <!-- Notification Banner -->
-        <div *ngFor="let notification of activeNotifications()"
-             class="notification-banner"
-             [class.success]="notification.type === 'success'"
-             [class.info]="notification.type === 'info'"
-             [@notificationAnimation]>
-          {{ notification.message }}
-        </div>
-
-        <!-- Signal Graph -->
-        <div class="signal-graph">
-          <!-- Connection Lines -->
-          <svg class="connections">
-            <g *ngFor="let node of nodes()">
-              <line *ngIf="node.type !== 'signal'"
-                [attr.x1]="getPreviousNode(node).position.x + 50"
-                [attr.y1]="getPreviousNode(node).position.y + 50"
-                [attr.x2]="node.position.x + 50"
-                [attr.y2]="node.position.y + 50"
-                class="connection-line"
-                [class.active]="isLineActive()"
-              />
-            </g>
-          </svg>
-
-          <!-- Signal Nodes -->
-          <div *ngFor="let node of nodes()"
-               [class]="'node ' + node.type"
-               [style.left.px]="node.position.x"
-               [style.top.px]="node.position.y"
-               [@nodeAnimation]="getNodeState(node)"
-               (click)="updateSignal(node)">
-            <div class="node-content">
-              <div class="node-type">{{ node.type | uppercase }}</div>
-              <div class="node-value">{{ getNodeValue(node) }}</div>
-              <div class="node-description" *ngIf="node.type === 'computed'">
-                ({{ currentValue() }} × 2)
-              </div>
-              <div class="node-description" *ngIf="node.type === 'effect'">
-                Effects Run
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Controls -->
-        <div class="controls">
-          <button (click)="incrementSignal()" class="action-btn">
-            Increment Signal ({{ currentValue() }})
-          </button>
-          <button (click)="resetDemo()" class="action-btn reset">
-            Reset Demo
-          </button>
-        </div>
-
-        <!-- Effect Monitoring -->
-        <div class="effect-monitoring">
-          <h3>Effect Monitoring</h3>
-          <div class="effect-stats">
-            <div class="stat-item">
-              <div class="label">Signal Value</div>
-              <div class="value">{{ currentValue() }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="label">Computed Value</div>
-              <div class="value">{{ computedValue() }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="label">Effects Run</div>
-              <div class="value">{{ effectCount() }}</div>
-            </div>
-          </div>
-
-          <div class="effect-timeline">
-            <h4>Recent Effects</h4>
-            <div class="timeline">
-              <div *ngFor="let effect of recentEffects()"
-                   class="timeline-item"
-                   [@effectItemAnimation]>
-                <div class="time">{{ formatTimestamp(effect.timestamp) }}</div>
-                <div class="message">{{ effect.message }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Storage Section -->
-        <div class="storage-section">
-          <h3>Local Storage</h3>
-          <div class="storage-info">
-            <div class="info-item">
-              <span class="label">Stored Value:</span>
-              <span class="value">{{ storageValue() }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Last Updated:</span>
-              <span class="value">{{ storageLastUpdated() }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">Update Count:</span>
-              <span class="value">{{ storageUpdateCount() }}</span>
-            </div>
-          </div>
-          <div class="storage-controls">
-            <button (click)="loadFromStorage()" 
-                    [disabled]="!hasStoredValue()"
-                    class="storage-btn">
-              Load from Storage
-            </button>
-            <button (click)="clearStorage()" 
-                    [disabled]="!hasStoredValue()"
-                    class="storage-btn clear">
-              Clear Storage
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .container {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-
-    .visualization-container {
-      background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      margin-top: 2rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      position: relative;
-    }
-
-    .signal-graph {
-      height: 300px;
-      position: relative;
-      background: #f8f9fa;
-      border-radius: 8px;
-      margin: 2rem 0;
-      padding: 1rem;
-    }
-
-    .connections {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .connection-line {
-      stroke: #95a5a6;
-      stroke-width: 2;
-      transition: all 0.3s ease;
-    }
-
-    .connection-line.active {
-      stroke: #3498db;
-      stroke-width: 3;
-      stroke-dasharray: 5;
-      animation: dash 1s linear infinite;
-    }
-
-    @keyframes dash {
-      to {
-        stroke-dashoffset: -10;
-      }
-    }
-
-    .node {
-      position: absolute;
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .node:hover {
-      transform: scale(1.1);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    }
-
-    .node.signal {
-      background: #3498db;
-      color: white;
-    }
-
-    .node.computed {
-      background: #2ecc71;
-      color: white;
-    }
-
-    .node.effect {
-      background: #e74c3c;
-      color: white;
-    }
-
-    .node-content {
-      text-align: center;
-    }
-
-    .node-type {
-      font-size: 0.8rem;
-      opacity: 0.9;
-      margin-bottom: 0.5rem;
-    }
-
-    .node-value {
-      font-size: 1.5rem;
-      font-weight: bold;
-    }
-
-    .controls {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      margin: 2rem 0;
-    }
-
-    .action-btn {
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 1rem;
-      transition: all 0.3s ease;
-      background: #3498db;
-      color: white;
-    }
-
-    .action-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
-    }
-
-    .action-btn.reset {
-      background: #e74c3c;
-    }
-
-    .effect-monitoring {
-      background: #f8f9fa;
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin: 2rem 0;
-    }
-
-    .effect-stats {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin: 1rem 0;
-      padding: 1rem;
-      background: #f8f9fa;
-      border-radius: 8px;
-    }
-
-    .stat-item {
-      text-align: center;
-    }
-
-    .stat-item .label {
-      font-size: 0.8rem;
-      color: #7f8c8d;
-      margin-bottom: 0.5rem;
-    }
-
-    .stat-item .value {
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: #2c3e50;
-    }
-
-    .effect-timeline {
-      margin-top: 1.5rem;
-    }
-
-    .timeline {
-      max-height: 200px;
-      overflow-y: auto;
-      padding: 1rem;
-      background: white;
-      border-radius: 4px;
-    }
-
-    .timeline-item {
-      display: flex;
-      align-items: flex-start;
-      padding: 0.5rem;
-      border-left: 3px solid #3498db;
-      margin: 0.5rem 0;
-      background: #f8f9fa;
-    }
-
-    .timeline-item .time {
-      min-width: 100px;
-      color: #7f8c8d;
-      font-size: 0.8rem;
-    }
-
-    .timeline-item .message {
-      flex: 1;
-      margin-left: 1rem;
-    }
-
-    .storage-section {
-      background: #f8f9fa;
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin: 2rem 0;
-    }
-
-    .storage-info {
-      background: #f8f9fa;
-      padding: 1rem;
-      border-radius: 4px;
-      margin: 1rem 0;
-    }
-
-    .storage-info p {
-      margin: 0.5rem 0;
-      font-size: 0.9rem;
-    }
-
-    .storage-controls {
-      display: flex;
-      gap: 1rem;
-      margin: 1rem 0;
-    }
-
-    .storage-btn {
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      background: #3498db;
-      color: white;
-      flex: 1;
-    }
-
-    .storage-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .storage-btn.clear {
-      background: #e74c3c;
-    }
-
-    .storage-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
-    }
-
-    .notification-banner {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 1rem 2rem;
-      border-radius: 8px;
-      color: white;
-      z-index: 1000;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      min-width: 300px;
-    }
-
-    .notification-banner.success {
-      background: #2ecc71;
-    }
-
-    .notification-banner.info {
-      background: #3498db;
-    }
-
-    .node-description {
-      font-size: 0.8rem;
-      opacity: 0.8;
-      margin-top: 0.3rem;
-    }
-  `],
+  templateUrl: './signals-animated.component.html',
+  styleUrls: ['./signals-animated.component.scss'],
   animations: [
     trigger('nodeAnimation', [
       transition('* => *', [
@@ -433,12 +55,6 @@ interface StorageData {
           style({ transform: 'scale(1.2)', offset: 0.5 }),
           style({ transform: 'scale(1)', offset: 1 })
         ]))
-      ])
-    ]),
-    trigger('effectItemAnimation', [
-      transition(':enter', [
-        style({ transform: 'translateX(-20px)', opacity: 0 }),
-        animate('200ms ease-out', style({ transform: 'translateX(0)', opacity: 1 }))
       ])
     ]),
     trigger('notificationAnimation', [
@@ -452,113 +68,423 @@ interface StorageData {
     ])
   ]
 })
-export class SignalsAnimatedComponent implements OnInit {
-  // Core signals
+export class SignalsAnimatedComponent implements OnInit, OnDestroy {
+  // Tab control
+  activeTab = signal<'technical' | 'simple'>('technical');
+
+  // Technical View Signals
   currentValue = signal<number>(0);
-  computedValue = computed(() => this.currentValue() * 2);
+  computedValue = computed(() => {
+    const value = this.currentValue();
+    return this.computeMode() === 'multiply' ? value * 2 : value + 2;
+  });
   effectCount = signal<number>(0);
-
-  // Effect tracking
   recentEffects = signal<EffectUpdate[]>([]);
+  effectStartTime = signal<number>(Date.now());
+  effectRunTimes = signal<number[]>([]);
   lastUpdateTime = signal<number>(Date.now());
-
-  // Storage signals
   storageValue = signal<string>('0');
   storageLastUpdated = signal<string>('Never');
   storageUpdateCount = signal<number>(0);
   hasStoredValue = signal<boolean>(false);
-
-  // Notifications
   activeNotifications = signal<Array<{ message: string; type: 'success' | 'info' }>>([]);
-
-  // Nodes state
   nodes = signal<SignalNode[]>([
     {
       id: 1,
       value: 0,
       type: 'signal',
-      position: { x: 150, y: 100 }
+      position: { x: 150, y: 100 },
+      description: 'Root Signal',
+      dependencies: []
     },
     {
       id: 2,
       value: 0,
       type: 'computed',
-      position: { x: 400, y: 100 }
+      position: { x: 400, y: 50 },
+      description: 'Double Value',
+      dependencies: [1]
     },
     {
       id: 3,
       value: 0,
+      type: 'computed',
+      position: { x: 400, y: 150 },
+      description: 'Square Value',
+      dependencies: [1]
+    },
+    {
+      id: 4,
+      value: 0,
       type: 'effect',
-      position: { x: 650, y: 100 }
+      position: { x: 650, y: 100 },
+      description: 'State Monitor',
+      dependencies: [2, 3]
     }
   ]);
 
+  // Pizza Example Signals
+  pizzaCount = signal<number>(0);
+  totalPrice = computed(() => this.pizzaCount() * 10);
+  happyCustomers = signal<number>(0);
+  kitchenUpdates = signal<string[]>([]);
+
+  // Enhanced Technical Properties
+  selectedNode = signal<SignalNode | null>(null);
+  activeParticles = signal<Array<{x: number, y: number}>>([]); 
+  nodeMetrics = signal<Map<number, SignalMetrics>>(new Map());
+  valueHistory = signal<Map<number, number[]>>(new Map());
+
+  // Add compute mode signal
+  computeMode = signal<'multiply' | 'add'>('multiply');
+
+  // Technical View Signals
+  effectCountByType = signal<Map<string, number>>(new Map());
+
   constructor() {
-    // Track signal and computed updates
-    effect(() => {
-      const value = this.currentValue();
-      const computed = this.computedValue();
+    // Initialize signals with proper values
+    this.currentValue.set(0);
+    this.effectCount.set(0);
+    this.effectStartTime.set(Date.now());
+    this.effectCountByType.set(new Map([
+      ['main', 0],
+      ['pizza', 0],
+      ['metrics', 0]
+    ]));
+    this.recentEffects.set([{
+      id: 0,
+      message: "Initial setup - Watching for signal changes",
+      timestamp: Date.now(),
+      triggerValue: 0,
+      computedValue: 0
+    }]);
+
+    // Main effect to track signal and computed values
+    this.mainEffect = effect(() => {
+      const startTime = performance.now();
       
-      // Count this effect execution
-      this.effectCount.update(count => count + 1);
-      this.lastUpdateTime.set(Date.now());
+      // Read values to track changes
+      const signalValue = this.currentValue();
+      const doubleValue = this.computedValue();
+      const squareValue = Math.pow(signalValue, 2);
 
-      // Record the effect
+      // Calculate effect duration
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      // Update effect metrics
+      this.effectRunTimes.update(times => [...times, duration].slice(-100));
+      
+      // Increment effect count
+      const newCount = this.effectCount() + 1;
+      this.effectCount.set(newCount);
+
+      // Create detailed log entry
       const effectUpdate: EffectUpdate = {
-        id: this.effectCount(),
-        message: `Signal changed to ${value}, computed updated to ${computed}`,
-        timestamp: Date.now()
+        id: newCount,
+        message: this.createEffectMessage(signalValue, doubleValue, squareValue, newCount),
+        timestamp: Date.now(),
+        triggerValue: signalValue,
+        computedValue: doubleValue
       };
-      this.recentEffects.update(effects => [effectUpdate, ...effects].slice(0, 5));
 
-      // Update node values
-      this.nodes.update(nodes => nodes.map(node => ({
-        ...node,
-        value: this.getNodeValue(node)
-      })));
+      // Update effect log (keep last 10 entries)
+      this.recentEffects.update(effects => {
+        const newEffects = [effectUpdate, ...effects];
+        return newEffects.slice(0, 10);
+      });
 
-      // Show notification
-      if (value > 0) {
-        if (value % 5 === 0) {
-          this.addNotification(`Milestone: Signal = ${value}, Computed = ${computed}!`, 'success');
-        } else {
-          this.addNotification(`Signal = ${value}, Computed = ${computed}`, 'info');
+      // Update all nodes
+      this.updateAllNodes(signalValue, doubleValue, squareValue, newCount);
+
+      // Log to console with performance info
+      this.logEffectUpdate(effectUpdate, duration);
+
+      // Update last update time for animations
+      this.lastUpdateTime.set(Date.now());
+    });
+
+    // Cleanup effect on component destroy
+    if (this.ngOnDestroy) {
+      const originalOnDestroy = this.ngOnDestroy.bind(this);
+      this.ngOnDestroy = () => {
+        if (this.mainEffect) {
+          this.mainEffect.destroy();
         }
+        originalOnDestroy();
+      };
+    } else {
+      this.ngOnDestroy = () => {
+        if (this.mainEffect) {
+          this.mainEffect.destroy();
+        }
+      };
+    }
+
+    // Pizza Example Effects
+    effect(() => {
+      const pizzas = this.pizzaCount();
+      
+      if (pizzas > 0) {
+        this.effectCountByType.update(counts => {
+          const newCounts = new Map(counts);
+          newCounts.set('pizza', (newCounts.get('pizza') || 0) + 1);
+          return newCounts;
+        });
+
+        this.kitchenUpdates.update(updates => [
+          `Chef is making pizza #${pizzas}! 👨‍🍳`,
+          ...updates
+        ].slice(0, 5));
+
+        this.happyCustomers.update(count => count + 1);
       }
     });
 
-    // Storage synchronization effect
+    // Track node metrics
     effect(() => {
       const value = this.currentValue();
       
-      // Count this effect execution
-      this.effectCount.update(count => count + 1);
+      this.effectCountByType.update(counts => {
+        const newCounts = new Map(counts);
+        newCounts.set('metrics', (newCounts.get('metrics') || 0) + 1);
+        return newCounts;
+      });
 
-      // Update storage
-      const storageData: StorageData = {
-        value,
-        lastUpdated: new Date().toLocaleString(),
-        updateCount: this.storageUpdateCount() + 1
-      };
+      this.nodes().forEach(node => {
+        const nodeValue = this.getNodeValue(node);
+        const currentMetrics = this.nodeMetrics().get(node.id) || {
+          updateCount: 0,
+          lastUpdateTime: Date.now(),
+          averageUpdateTime: 0,
+          peakValue: nodeValue
+        };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storageData));
-      this.storageValue.set(value.toString());
-      this.storageLastUpdated.set(storageData.lastUpdated);
-      this.storageUpdateCount.update(count => count + 1);
-      this.hasStoredValue.set(true);
+        const newMetrics = {
+          ...currentMetrics,
+          updateCount: currentMetrics.updateCount + 1,
+          lastUpdateTime: Date.now(),
+          peakValue: Math.max(currentMetrics.peakValue, nodeValue)
+        };
 
-      // Record storage effect
-      const effectUpdate: EffectUpdate = {
-        id: this.effectCount(),
-        message: `Stored value ${value} in localStorage`,
-        timestamp: Date.now()
-      };
-      this.recentEffects.update(effects => [effectUpdate, ...effects].slice(0, 5));
+        this.nodeMetrics.update(metrics => {
+          const newMap = new Map(metrics);
+          newMap.set(node.id, newMetrics);
+          return newMap;
+        });
+
+        // Update value history
+        this.valueHistory.update(history => {
+          const newHistory = new Map(history);
+          const nodeHistory = newHistory.get(node.id) || [];
+          newHistory.set(node.id, [...nodeHistory, nodeValue].slice(-20));
+          return newHistory;
+        });
+
+        // Animate data flow
+        if (node.dependencies?.length) {
+          node.dependencies.forEach(depId => {
+            this.animateDataFlow(depId, node.id);
+          });
+        }
+      });
     });
   }
 
+  private mainEffect: any; // Store effect reference
+
+  ngOnDestroy() {
+    if (this.mainEffect) {
+      this.mainEffect.destroy();
+    }
+  }
+
+  // Tab Control
+  setActiveTab(tab: 'technical' | 'simple') {
+    this.activeTab.set(tab);
+  }
+
+  // Technical View Methods
+  incrementSignal() {
+    const current = this.currentValue();
+    this.currentValue.set(current + 1);
+  }
+
+  resetDemo() {
+    // Reset all values
+    this.currentValue.set(0);
+    this.effectCount.set(0);
+    this.effectCountByType.set(new Map([
+      ['main', 0],
+      ['pizza', 0],
+      ['metrics', 0]
+    ]));
+    
+    // Add reset message to effect log
+    this.recentEffects.set([{
+      id: 0,
+      message: `Demo Reset:
+• All values cleared
+• Effect count reset to 0
+• Signal value reset to 0
+• Computed values reset
+• Watching for new changes...`,
+      timestamp: Date.now(),
+      triggerValue: 0,
+      computedValue: 0
+    }]);
+
+    // Reset all nodes
+    this.nodes.update(nodes => 
+      nodes.map(node => ({
+        ...node,
+        value: 0
+      }))
+    );
+
+    // Update timestamp
+    this.lastUpdateTime.set(Date.now());
+  }
+
+  getNodeValue(node: SignalNode): number {
+    switch (node.type) {
+      case 'signal':
+        return this.currentValue();
+      case 'computed':
+        return node.id === 2 ? 
+          this.computedValue() : 
+          Math.pow(this.currentValue(), 2);
+      case 'effect':
+        return this.effectCount();
+      default:
+        return 0;
+    }
+  }
+
+  getNodeState(node: SignalNode): string {
+    return `${node.type}-${this.getNodeValue(node)}`;
+  }
+
+  updateSignal(node: SignalNode) {
+    if (node.type === 'signal') {
+      this.incrementSignal();
+    }
+  }
+
+  getPreviousNode(node: SignalNode): SignalNode {
+    const nodes = this.nodes();
+    const index = nodes.findIndex(n => n.id === node.id);
+    return nodes[index - 1];
+  }
+
+  isLineActive(): boolean {
+    return Date.now() - this.lastUpdateTime() < 300;
+  }
+
+  addNotification(message: string, type: 'success' | 'info') {
+    this.activeNotifications.update(notifications => [
+      ...notifications,
+      { message, type }
+    ]);
+
+    setTimeout(() => {
+      this.activeNotifications.update(notifications =>
+        notifications.filter(n => n.message !== message)
+      );
+    }, 3000);
+  }
+
+  clearStorage() {
+    localStorage.removeItem(STORAGE_KEY);
+    this.storageValue.set('0');
+    this.storageLastUpdated.set('Never');
+    this.storageUpdateCount.set(0);
+    this.hasStoredValue.set(false);
+  }
+
+  // Pizza Example Methods
+  addPizza() {
+    this.pizzaCount.update(count => count + 1);
+  }
+
+  resetOrder() {
+    this.pizzaCount.set(0);
+    this.kitchenUpdates.set([]);
+    this.happyCustomers.set(0);
+  }
+
+  // Enhanced Technical Methods
+  getNodeById(id: number): SignalNode {
+    return this.nodes().find(n => n.id === id) || this.nodes()[0];
+  }
+
+  getNodeMetrics(node: SignalNode): SignalMetrics {
+    return this.nodeMetrics().get(node.id) || {
+      updateCount: 0,
+      lastUpdateTime: 0,
+      averageUpdateTime: 0,
+      peakValue: 0
+    };
+  }
+
+  animateDataFlow(fromId: number, toId: number) {
+    const from = this.getNodeById(fromId);
+    const to = this.getNodeById(toId);
+    const steps = 20;
+    
+    for (let i = 0; i <= steps; i++) {
+      setTimeout(() => {
+        const x = from.position.x + (to.position.x - from.position.x) * (i / steps);
+        const y = from.position.y + (to.position.y - from.position.y) * (i / steps);
+        
+        this.activeParticles.update(particles => [
+          ...particles,
+          { x: x + 50, y: y + 50 }
+        ]);
+      }, i * (1000 / steps));
+    }
+
+    setTimeout(() => {
+      this.activeParticles.update(particles => particles.slice(1));
+    }, 1000);
+  }
+
+  getUpdateFrequency(): number {
+    const metrics = this.nodeMetrics().get(1);
+    if (!metrics) return 0;
+    const timeWindow = 1000; // 1 second
+    return Math.round((metrics.updateCount / timeWindow) * 100) / 100;
+  }
+
+  getAverageEffectTime(): number {
+    const metrics = this.nodeMetrics().get(4);
+    return metrics ? Math.round(metrics.averageUpdateTime) : 0;
+  }
+
+  getMemoryUsage(): number {
+    // Simulate memory usage based on history size
+    const totalHistory = Array.from(this.valueHistory().values())
+      .reduce((sum, arr) => sum + arr.length, 0);
+    return Math.round(totalHistory * 0.5); // Simulate KB usage
+  }
+
+  getSignalChainDepth(): number {
+    const findDepth = (nodeId: number, visited = new Set<number>()): number => {
+      if (visited.has(nodeId)) return 0;
+      visited.add(nodeId);
+      
+      const node = this.getNodeById(nodeId);
+      if (!node.dependencies?.length) return 1;
+      
+      return 1 + Math.max(...node.dependencies.map(depId => 
+        findDepth(depId, visited)
+      ));
+    };
+
+    return findDepth(4);
+  }
+
   ngOnInit() {
-    // Check for existing storage data on init
     const storedData = localStorage.getItem(STORAGE_KEY);
     if (storedData) {
       try {
@@ -574,86 +500,100 @@ export class SignalsAnimatedComponent implements OnInit {
     }
   }
 
-  getNodeValue(node: SignalNode): number {
-    switch (node.type) {
-      case 'signal':
-        return this.currentValue();
-      case 'computed':
-        return this.computedValue();
-      case 'effect':
-        return this.effectCount();
-      default:
-        return 0;
-    }
+  selectNode(node: SignalNode) {
+    this.selectedNode.set(node);
   }
 
-  getNodeState(node: SignalNode): string {
-    return `${node.type}-${this.getNodeValue(node)}`;
+  closeInspector() {
+    this.selectedNode.set(null);
   }
 
-  incrementSignal() {
-    this.currentValue.update(v => v + 1);
+  // Update multiply method
+  multiplySignal() {
+    const current = this.currentValue();
+    this.currentValue.set(current * 2);
   }
 
-  updateSignal(node: SignalNode) {
-    if (node.type === 'signal') {
-      this.incrementSignal();
-    }
+  // Enhanced log method
+  private logEffectUpdate(effect: EffectUpdate, duration: number) {
+    const timeFromStart = ((Date.now() - this.effectStartTime()) / 1000).toFixed(2);
+    
+    console.group(`%cEffect Update #${effect.id}`, 'color: #4CAF50; font-weight: bold');
+    console.log('Message:', effect.message);
+    console.log('Time:', new Date(effect.timestamp).toLocaleTimeString());
+    console.log('Duration:', `${duration.toFixed(2)}ms`);
+    console.log('Time since start:', `${timeFromStart}s`);
+    console.log('Values:', {
+      signal: effect.triggerValue,
+      computed: effect.computedValue,
+      totalEffects: this.effectCount(),
+      avgDuration: this.getAverageEffectDuration()
+    });
+    console.groupEnd();
   }
 
-  resetDemo() {
-    this.currentValue.set(0);
-    this.effectCount.set(0);
-    this.lastUpdateTime.set(Date.now());
-    this.clearStorage();
+  // Add helper method to calculate average effect duration
+  private getAverageEffectDuration(): number {
+    const times = this.effectRunTimes();
+    if (times.length === 0) return 0;
+    const sum = times.reduce((acc, time) => acc + time, 0);
+    return sum / times.length;
   }
 
-  loadFromStorage() {
-    const storedData = localStorage.getItem(STORAGE_KEY);
-    if (storedData) {
-      try {
-        const data: StorageData = JSON.parse(storedData);
-        this.currentValue.set(data.value);
-      } catch (e) {
-        console.error('Error loading from storage:', e);
-      }
-    }
+  // Add helper methods for effect visualization
+  getEffectTime(timestamp: number): string {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    return seconds === 0 ? 'just now' : `${seconds}s ago`;
   }
 
-  clearStorage() {
-    localStorage.removeItem(STORAGE_KEY);
-    this.storageValue.set('0');
-    this.storageLastUpdated.set('Never');
-    this.storageUpdateCount.set(0);
-    this.hasStoredValue.set(false);
+  getEffectClass(effect: EffectUpdate): string {
+    const age = Date.now() - effect.timestamp;
+    return age < 1000 ? 'effect-new' : 'effect-old';
   }
 
-  addNotification(message: string, type: 'success' | 'info') {
-    this.activeNotifications.update(notifications => [
-      ...notifications,
-      { message, type }
-    ]);
-
-    // Remove notification after 3 seconds
-    setTimeout(() => {
-      this.activeNotifications.update(notifications =>
-        notifications.filter(n => n.message !== message)
-      );
-    }, 3000);
+  // Helper method to determine action type
+  private getActionType(newValue: number): string {
+    const prevValue = this.getPreviousValue();
+    if (newValue === 0) return "Reset";
+    if (newValue === prevValue + 1) return "Increment (+1)";
+    if (newValue === prevValue * 2) return "Multiply (×2)";
+    return "Value Change";
   }
 
-  getPreviousNode(node: SignalNode): SignalNode {
-    const nodes = this.nodes();
-    const index = nodes.findIndex(n => n.id === node.id);
-    return nodes[index - 1];
+  // Helper method to get previous value
+  private getPreviousValue(): number {
+    const effects = this.recentEffects();
+    return effects.length > 0 ? effects[0].triggerValue : 0;
   }
 
-  isLineActive(): boolean {
-    return Date.now() - this.lastUpdateTime() < 300;
+  // Helper method to create effect message
+  private createEffectMessage(signal: number, double: number, square: number, effectCount: number): string {
+    const action = this.getActionType(signal);
+    return `Effect #${effectCount}:
+• Signal value: ${signal}
+• Double value (×2): ${double}
+• Square value (n²): ${square}
+• Action: ${action}`;
   }
 
-  formatTimestamp(timestamp: number): string {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString();
+  // Helper method to update all nodes
+  private updateAllNodes(signal: number, double: number, square: number, effectCount: number) {
+    this.nodes.update(nodes => 
+      nodes.map(node => {
+        switch (node.type) {
+          case 'signal':
+            return { ...node, value: signal };
+          case 'computed':
+            return { 
+              ...node, 
+              value: node.id === 2 ? double : square 
+            };
+          case 'effect':
+            return { ...node, value: effectCount };
+          default:
+            return node;
+        }
+      })
+    );
   }
-} 
+}

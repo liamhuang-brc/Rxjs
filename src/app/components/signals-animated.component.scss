@@ -1,0 +1,523 @@
+.main-container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e1e4e8;
+  padding-bottom: 1rem;
+}
+
+.tab-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  background: none;
+  font-size: 1rem;
+  color: #586069;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+
+  &.active {
+    color: #4a90e2;
+    border-bottom-color: #4a90e2;
+  }
+
+  &:hover:not(.active) {
+    color: #24292e;
+  }
+}
+
+.technical-view {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.metrics-panel {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  color: #586069;
+  margin-bottom: 0.5rem;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #24292e;
+}
+
+.signal-graph {
+  position: relative;
+  height: 400px;
+  background: #ffffff;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin: 1.5rem 0;
+  overflow: hidden;
+}
+
+.connections {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.connection-line {
+  stroke: #e1e4e8;
+  stroke-width: 1.5;
+  transition: all 0.3s ease;
+
+  &.active {
+    stroke: #4a90e2;
+    stroke-width: 2;
+  }
+}
+
+.node {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e1e4e8;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+  &.signal { border-left: 4px solid #4a90e2; }
+  &.computed { border-left: 4px solid #2ecc71; }
+  &.effect { border-left: 4px solid #e74c3c; }
+}
+
+.node-content {
+  text-align: center;
+  padding: 1rem;
+}
+
+.node-type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #586069;
+  margin-bottom: 0.5rem;
+}
+
+.node-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #24292e;
+  margin-bottom: 0.5rem;
+}
+
+.node-description {
+  font-size: 0.75rem;
+  color: #6a737d;
+}
+
+.inspector-panel {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e1e4e8;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #24292e;
+  }
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #586069;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    color: #24292e;
+  }
+}
+
+.inspector-content {
+  padding: 1rem;
+}
+
+.inspector-section {
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0 0 1rem;
+    font-size: 0.875rem;
+    color: #24292e;
+  }
+}
+
+.property-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.property-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: #f6f8fa;
+  border-radius: 4px;
+}
+
+.property-label {
+  font-size: 0.875rem;
+  color: #586069;
+}
+
+.property-value {
+  font-size: 0.875rem;
+  color: #24292e;
+  font-weight: 500;
+}
+
+.dependency-list {
+  background: #f6f8fa;
+  border-radius: 4px;
+  padding: 0.5rem;
+}
+
+.dependency-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-bottom: 1px solid #e1e4e8;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.dep-type {
+  font-size: 0.875rem;
+  color: #586069;
+}
+
+.dep-value {
+  font-size: 0.875rem;
+  color: #24292e;
+  font-weight: 500;
+}
+
+// Pizza Shop Styles
+.pizza-shop {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: 'Comic Sans MS', cursive;
+
+  h2 {
+    text-align: center;
+    color: #ff6b6b;
+  }
+}
+
+.pizza-container {
+  background: #fff9f9;
+  border-radius: 15px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.order-box {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin: 20px 0;
+  text-align: center;
+  border: 3px dashed #ff6b6b;
+}
+
+.pizza-count, .total-price, .happy-customers {
+  font-size: 1.2em;
+  margin: 10px 0;
+  padding: 10px;
+  background: #fff5f5;
+  border-radius: 8px;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.pizza-btn, .reset-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1em;
+  transition: transform 0.2s;
+}
+
+.pizza-btn {
+  background: #ff6b6b;
+  color: white;
+
+  &:hover {
+    transform: scale(1.1);
+    background: #ff5252;
+  }
+}
+
+.reset-btn {
+  background: #4d96ff;
+  color: white;
+
+  &:hover {
+    transform: scale(1.1);
+    background: #3d86ff;
+  }
+}
+
+.kitchen-updates {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  margin-top: 20px;
+}
+
+.update-item {
+  padding: 10px;
+  margin: 5px 0;
+  background: #fff5f5;
+  border-radius: 8px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.signal-controls {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.control-group {
+  h4 {
+    margin: 0 0 1rem;
+    color: #24292e;
+    font-size: 1rem;
+  }
+}
+
+.control-actions {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  .btn-label {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .btn-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  &.increment {
+    background: #4a90e2;
+    color: white;
+    &:hover {
+      background: #357abd;
+    }
+  }
+
+  &.multiply {
+    background: #2ecc71;
+    color: white;
+    &:hover {
+      background: #27ae60;
+    }
+  }
+
+  &.reset {
+    background: #e74c3c;
+    color: white;
+    &:hover {
+      background: #c0392b;
+    }
+  }
+}
+
+.signal-values {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.value-card {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 6px;
+  text-align: center;
+  border-top: 4px solid;
+
+  &.signal {
+    border-color: #4a90e2;
+  }
+
+  &.computed {
+    border-color: #2ecc71;
+  }
+
+  &.effect {
+    border-color: #e74c3c;
+  }
+
+  .card-label {
+    font-size: 0.875rem;
+    color: #586069;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #24292e;
+  }
+}
+
+.effect-log {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+  h4 {
+    margin: 0 0 1rem;
+    color: #24292e;
+    font-size: 1rem;
+  }
+}
+
+.effect-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.effect-item {
+  padding: 1rem;
+  border-left: 4px solid #e1e4e8;
+  margin-bottom: 0.5rem;
+  background: #f6f8fa;
+  border-radius: 0 4px 4px 0;
+  transition: all 0.3s ease;
+
+  &.effect-new {
+    border-left-color: #2ecc71;
+    background: #f0fff4;
+    animation: highlightEffect 1s ease-out;
+  }
+}
+
+.effect-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  color: #586069;
+
+  .effect-id {
+    font-weight: 600;
+  }
+
+  .effect-time {
+    color: #6a737d;
+  }
+}
+
+.effect-details {
+  .effect-value {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #24292e;
+    margin-bottom: 0.25rem;
+  }
+
+  .effect-message {
+    font-size: 0.875rem;
+    color: #586069;
+  }
+}
+
+@keyframes highlightEffect {
+  0% { background: #dcffe4; }
+  100% { background: #f0fff4; }
+} 

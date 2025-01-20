@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { SignalsTutorialNewComponent } from './components/signals-tutorial-new.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'intro', pathMatch: 'full' },
@@ -21,6 +22,11 @@ export const routes: Routes = [
   { 
     path: 'observable-demo',
     loadComponent: () => import('./components/observable-demo.component').then(m => m.ObservableDemoComponent)
+  },
+  {
+    path: 'signals-tutorial',
+    component: SignalsTutorialNewComponent,
+    title: 'Signals Tutorial'
   },
   { 
     path: 'signals-deep-dive',

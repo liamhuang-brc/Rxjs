@@ -1,0 +1,181 @@
+<div class="main-container">
+  <div class="tabs">
+    <button [class.active]="activeTab() === 'technical'" (click)="setActiveTab('technical')" class="tab-btn">Technical View</button>
+    <button [class.active]="activeTab() === 'simple'" (click)="setActiveTab('simple')" class="tab-btn">Simple Pizza Example</button>
+  </div>
+  
+  <!-- Technical View -->
+  <div *ngIf="activeTab() === 'technical'" class="tab-content technical-view">
+    <h2>Signal Architecture Visualization</h2>
+    <div class="visualization-container">
+      <!-- Performance Metrics -->
+      <div class="metrics-panel">
+        <div class="metrics-grid">
+          <div class="metric-item">
+            <span class="metric-label">Updates/sec</span>
+            <span class="metric-value">{{ getUpdateFrequency() }}</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Effect Time</span>
+            <span class="metric-value">{{ getAverageEffectTime() }}ms</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Chain Depth</span>
+            <span class="metric-value">{{ getSignalChainDepth() }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signal Controls -->
+      <div class="signal-controls">
+        <div class="control-group">
+          <h4>Signal Controls</h4>
+          <div class="control-actions">
+            <button class="control-btn increment" (click)="incrementSignal()">
+              <span class="btn-label">Increment Signal</span>
+              <span class="btn-value">{{ currentValue() }}</span>
+            </button>
+            <button class="control-btn multiply" (click)="multiplySignal()">
+              <span class="btn-label">Multiply by 2</span>
+              <span class="btn-value">×2</span>
+            </button>
+            <button class="control-btn reset" (click)="resetDemo()">Reset All</button>
+          </div>
+        </div>
+        
+        <div class="signal-values">
+          <div class="value-card signal">
+            <div class="card-label">Signal Value</div>
+            <div class="card-value">{{ currentValue() }}</div>
+          </div>
+          <div class="value-card computed">
+            <div class="card-label">Computed (×2)</div>
+            <div class="card-value">{{ computedValue() }}</div>
+          </div>
+          <div class="value-card effect">
+            <div class="card-label">Effects Run</div>
+            <div class="card-value">{{ effectCount() }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Effect Log Panel -->
+      <div class="effect-log">
+        <h4>Effect Log</h4>
+        <div class="effect-list">
+          <div *ngFor="let effect of recentEffects()" 
+               [class]="'effect-item ' + getEffectClass(effect)">
+            <div class="effect-header">
+              <span class="effect-id">#{{effect.id}}</span>
+              <span class="effect-time">{{getEffectTime(effect.timestamp)}}</span>
+            </div>
+            <div class="effect-details">
+              <div class="effect-value">
+                Signal: {{effect.triggerValue}} → Computed: {{effect.computedValue}}
+              </div>
+              <div class="effect-message">{{effect.message}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Signal Graph -->
+      <div class="signal-graph">
+        <svg class="connections">
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#4a90e2"/>
+            </marker>
+          </defs>
+          <g *ngFor="let node of nodes()">
+            <line *ngFor="let dep of node.dependencies || []"
+              [attr.x1]="getNodeById(dep).position.x + 50"
+              [attr.y1]="getNodeById(dep).position.y + 50"
+              [attr.x2]="node.position.x + 50"
+              [attr.y2]="node.position.y + 50"
+              class="connection-line"
+              [class.active]="isLineActive()"
+              marker-end="url(#arrowhead)">
+            </line>
+          </g>
+        </svg>
+
+        <div *ngFor="let node of nodes()"
+          [class]="'node ' + node.type"
+          [style.left.px]="node.position.x"
+          [style.top.px]="node.position.y"
+          [@nodeAnimation]="getNodeState(node)"
+          (click)="selectNode(node)">
+          <div class="node-content">
+            <div class="node-type">{{ node.type | uppercase }}</div>
+            <div class="node-value">{{ getNodeValue(node) }}</div>
+            <div class="node-description">{{ node.description }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inspector Panel -->
+      <ng-container *ngIf="selectedNode() as node">
+        <div class="inspector-panel">
+          <div class="inspector-header">
+            <h3>Signal Inspector</h3>
+            <button class="close-btn" (click)="closeInspector()">×</button>
+          </div>
+          <div class="inspector-content">
+            <div class="inspector-section">
+              <h4>Properties</h4>
+              <div class="property-grid">
+                <div class="property-item">
+                  <span class="property-label">Type</span>
+                  <span class="property-value">{{ node.type }}</span>
+                </div>
+                <div class="property-item">
+                  <span class="property-label">Value</span>
+                  <span class="property-value">{{ getNodeValue(node) }}</span>
+                </div>
+                <div class="property-item">
+                  <span class="property-label">Updates</span>
+                  <span class="property-value">{{ getNodeMetrics(node).updateCount }}</span>
+                </div>
+              </div>
+            </div>
+            <ng-container *ngIf="node.dependencies?.length">
+              <div class="inspector-section">
+                <h4>Dependencies</h4>
+                <div class="dependency-list">
+                  <div class="dependency-item" *ngFor="let depId of node.dependencies">
+                    <span class="dep-type">{{ getNodeById(depId).type }}</span>
+                    <span class="dep-value">{{ getNodeValue(getNodeById(depId)) }}</span>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Pizza Example View -->
+  <div *ngIf="activeTab() === 'simple'" class="tab-content pizza-shop">
+    <h2>🍕 Pizza Signal Shop 🍕</h2>
+    <div class="pizza-container">
+      <div class="order-box">
+        <h3>Your Pizza Order</h3>
+        <div class="pizza-count">Number of Pizzas: {{ pizzaCount() }}</div>
+        <div class="total-price">Total Price: ${{ totalPrice() }}</div>
+        <div class="happy-customers">Happy Customers Today: {{ happyCustomers() }}</div>
+      </div>
+      <div class="controls">
+        <button (click)="addPizza()" class="pizza-btn">Add Pizza 🍕</button>
+        <button (click)="resetOrder()" class="reset-btn">Start Over 🔄</button>
+      </div>
+      <div class="kitchen-updates">
+        <h3>Kitchen Updates 👨‍🍳</h3>
+        <div class="updates-list">
+          <div *ngFor="let update of kitchenUpdates()" class="update-item">{{ update }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

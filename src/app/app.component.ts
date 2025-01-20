@@ -44,6 +44,12 @@ import { animate, style, transition, trigger } from '@angular/animations';
               </a>
             </li>
             <li>
+              <a routerLink="/signals-tutorial" routerLinkActive="active">
+                <span class="icon">✨</span>
+                Signals Tutorial
+              </a>
+            </li>
+            <li>
               <a routerLink="/signals-deep-dive" routerLinkActive="active">
                 <span class="icon">🔍</span>
                 Signals Deep Dive

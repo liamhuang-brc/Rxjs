@@ -149,6 +149,6 @@ count$.next(5);</pre>
   `]
 })
 export class SignalsVsRxJSComponent {
-  constructor(private renderer: Renderer) {
+  constructor(private renderer: Renderer2) {
   }
 } 

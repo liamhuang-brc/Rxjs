@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import Renderer from '@angular/core';
 
 @Component({
   selector: 'app-signals-vs-rxjs',
@@ -147,4 +148,7 @@ count$.next(5);</pre>
     }
   `]
 })
-export class SignalsVsRxJSComponent {} 
+export class SignalsVsRxJSComponent {
+  constructor(private renderer: Renderer) {
+  }
+} 

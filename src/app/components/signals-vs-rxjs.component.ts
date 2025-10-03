@@ -148,7 +148,9 @@ count$.next(5);</pre>
     }
   `]
 })
+import { Component, ElementRef, Renderer2 } from '@angular/core';
+
 export class SignalsVsRxJSComponent {
-  constructor(private renderer: Renderer) {
+  constructor(private renderer: Renderer2, private el: ElementRef) {
   }
 } 

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup } from '@angular/forms';
 import { signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/http';
+import { HttpClientModule } from '@angular/common/http';
 import { BehaviorSubject, tap } from 'rxjs';
 
 interface Data {
@@ -13,7 +13,7 @@ interface Data {
 @Component({
   selector: 'app-code-examples',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, HttpClientModule],
   template: `
     <div class="container">
       <h2>Angular Code Examples</h2>

@@ -1,12 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { animate, style, transition, trigger } from '@angular/animations';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient } from '@angular/http';
 
 @Component({
   selector: 'app-intro',
   standalone: true,
-  imports: [CommonModule, HttpClient],
+  imports: [CommonModule],
   template: `
     <div class="intro-container" [@fadeIn]>
       <h1>Understanding Observables and Signals in Angular</h1>

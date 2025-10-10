@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup } from '@angular/forms';
 import { signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/http';
+import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { BehaviorSubject, tap } from 'rxjs';
 
 interface Data {
@@ -11,9 +11,10 @@ interface Data {
 }
 
 @Component({
+  providers: [],
   selector: 'app-code-examples',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, HttpClient],
   template: `
     <div class="container">
       <h2>Angular Code Examples</h2>
@@ -94,6 +95,7 @@ interface Data {
 export class CodeExamplesComponent {
   counterExample = `
 @Component({
+  providers: [],
   template: \`
     <div>
       <p>Count: {{ count() }}</p>
@@ -128,6 +130,7 @@ export class DataService {
 
   formExample = `
 @Component({
+  providers: [],
   template: \`
     <form [formGroup]="form">
       <input formControlName="name">

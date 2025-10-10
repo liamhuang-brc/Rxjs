@@ -2,8 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup } from '@angular/forms';
 import { signal, computed } from '@angular/core';
-import { HttpClient } from '@angular/http';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, tap } from 'rxjs';
+import { HttpClientModule } from '@angular/common/http';
 
 interface Data {
   id: number;

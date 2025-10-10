@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import Renderer from '@angular/core';
 
 @Component({
   selector: 'app-signals-vs-rxjs',
